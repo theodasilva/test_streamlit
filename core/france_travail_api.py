@@ -1,6 +1,7 @@
 import time
 from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional
+from core import utils
 
 import requests
 
@@ -19,10 +20,8 @@ class FranceTravailAPI:
     """
 
     def __init__(self):
-        self.CLIENT_ID = "PAR_competencedepuisrome_0a537ebfca7e740e634c5515584f7e5e662605ce003f8d6caef5fc88372f03c0"
-        self.CLIENT_SECRET = (
-            "44c5052da312c862fb59bd46583af76bc800eff119ac77328b6d7c4bfbe593c0"
-        )
+        self.CLIENT_ID = utils.require_env("FRANCETRAVAIL_CLIENT_ID")
+        self.CLIENT_SECRET = utils.require_env("FRANCETRAVAIL_CLIENT_SECRET")
         self.SCOPE = "api_rome-fiches-metiersv1 api_rome-metiersv1 nomenclatureRome"
 
         self.BASE_URL_JOB_DESCRIPTION = BASE_URL_JOB_DESCRIPTION
