@@ -1,0 +1,20 @@
+cookie:
+  expiry_days: 30
+  key: 12jmxoPlzw8
+  name: some_cookie
+credentials:
+  usernames:
+    Theo:
+      failed_login_attempts: 0
+      logged_in: false
+      password: $2b$12$ywDw7xLVFNdnFt0Xd5ErBONpMJdMP8n0O8UeJ1hLNNsMm4xk1ZVIy
+      roles:
+      - Admin
+    admin:
+      failed_login_attempts: 0
+      logged_in: false
+      password: $2b$12$ObJGKd0blGySXItbwCW6AuZpggYd86.taOY9fX68/AnyI8wDy5ibW
+      roles:
+      - Superuser
+pre-authorized:
+  emails: []
