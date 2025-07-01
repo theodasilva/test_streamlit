@@ -57,6 +57,12 @@ client_file = st.file_uploader(
     "Fichier client", type="xlsx", key="client", label_visibility="hidden"
 )
 
+# Initialize session state for generation tracking
+if 'generation_complete' not in st.session_state:
+    st.session_state.generation_complete = False
+if 'raw_buffer' not in st.session_state:
+    st.session_state.raw_buffer = None
+
 if skills_file and client_file:
     # ------------------------------
     # CHOIX DU MODE ET DES OPTIONS
@@ -544,106 +550,111 @@ if skills_file and client_file:
         )
 
         with st.expander("📦 Télécharger toutes les passerelles (brutes)"):
-            if st.button("➡️ Générer toutes les passerelles sans aucun filtre"):
+            generate_button = st.button("➡️ Générer toutes les passerelles sans aucun filtre")
+
+            if generate_button or st.session_state.get('generation_complete', False):
                 st.markdown("###\n### ⏳ Génération des passerelles brutes...")
 
-                # Rechargement brut
-                raw_df = pd.read_excel(skills_file, sheet_name="Macro-Compétences")
-                raw_df = raw_df.dropna(
-                    subset=["Code Métier", "Intitulé", "Macro Compétence"]
-                )
+                try:
+                    # Rechargement brut
+                    raw_df = pd.read_excel(skills_file, sheet_name="Macro-Compétences")
+                    raw_df = raw_df.dropna(
+                        subset=["Code Métier", "Intitulé", "Macro Compétence"]
+                    )
 
-                client_jobs_df = pd.read_excel(client_file)
-                raw_client_codes = client_jobs_df["Code ROME"].dropna().unique()
+                    client_jobs_df = pd.read_excel(client_file)
+                    raw_client_codes = client_jobs_df["Code ROME"].dropna().unique()
 
-                client_jobs_df = raw_df[raw_df["Code Métier"].isin(raw_client_codes)]
-                non_client_jobs_df = raw_df[
-                    ~raw_df["Code Métier"].isin(raw_client_codes)
-                ]
+                    client_jobs_df = raw_df[raw_df["Code Métier"].isin(raw_client_codes)]
+                    non_client_jobs_df = raw_df[
+                        ~raw_df["Code Métier"].isin(raw_client_codes)
+                    ]
 
-                # Fonction de calcul avec barre de progression
-                def calculate_transitions(start_jobs, target_jobs, progress_bar=None):
-                    rows = []
-                    total = len(start_jobs["Code Métier"].unique())
-                    for i, (start_code, start_group) in enumerate(
-                        start_jobs.groupby("Code Métier")
-                    ):
-                        start_title = start_group["Intitulé"].iloc[0]
-                        start_skills = set(start_group["Macro Compétence"].dropna())
-                        for target_code, target_group in target_jobs.groupby(
-                            "Code Métier"
+                    # Fonction de calcul avec barre de progression
+                    def calculate_transitions(start_jobs, target_jobs, progress_bar=None):
+                        rows = []
+                        total = len(start_jobs["Code Métier"].unique())
+                        for i, (start_code, start_group) in enumerate(
+                            start_jobs.groupby("Code Métier")
                         ):
-                            target_title = target_group["Intitulé"].iloc[0]
-                            target_skills = set(
-                                target_group["Macro Compétence"].dropna()
-                            )
-                            intersection = start_skills & target_skills
-                            if intersection:
-                                for skill in intersection:
-                                    # Cherche catégorie dans le groupe d'arrivée (prioritaire) ou de départ
-                                    if skill in target_group["Macro Compétence"].values:
-                                        cat = target_group[
-                                            target_group["Macro Compétence"] == skill
-                                        ]["Catégorie"].iloc[0]
-                                    else:
-                                        cat = start_group[
-                                            start_group["Macro Compétence"] == skill
-                                        ]["Catégorie"].iloc[0]
+                            start_title = start_group["Intitulé"].iloc[0]
+                            start_skills = set(start_group["Macro Compétence"].dropna())
+                            for target_code, target_group in target_jobs.groupby(
+                                "Code Métier"
+                            ):
+                                target_title = target_group["Intitulé"].iloc[0]
+                                target_skills = set(
+                                    target_group["Macro Compétence"].dropna()
+                                )
+                                intersection = start_skills & target_skills
+                                if intersection:
+                                    for skill in intersection:
+                                        if skill in target_group["Macro Compétence"].values:
+                                            cat = target_group[
+                                                target_group["Macro Compétence"] == skill
+                                            ]["Catégorie"].iloc[0]
+                                        else:
+                                            cat = start_group[
+                                                start_group["Macro Compétence"] == skill
+                                            ]["Catégorie"].iloc[0]
 
-                                    rows.append(
-                                        {
-                                            "Code Métier Départ": start_code,
-                                            "Intitulé Départ": start_title,
-                                            "Code Métier Arrivée": target_code,
-                                            "Intitulé Arrivée": target_title,
-                                            "Nombre de compétences partagées": len(
-                                                intersection
-                                            ),
-                                            "Catégorie": cat,
-                                            "Compétence commune": skill,
-                                        }
-                                    )
+                                        rows.append(
+                                            {
+                                                "Code Métier Départ": start_code,
+                                                "Intitulé Départ": start_title,
+                                                "Code Métier Arrivée": target_code,
+                                                "Intitulé Arrivée": target_title,
+                                                "Nombre de compétences partagées": len(
+                                                    intersection
+                                                ),
+                                                "Catégorie": cat,
+                                                "Compétence commune": skill,
+                                            }
+                                        )
 
-                        if progress_bar:
-                            progress_bar.progress((i + 1) / total)
-                    return pd.DataFrame(rows)
+                            if progress_bar:
+                                progress_bar.progress((i + 1) / total)
+                        return pd.DataFrame(rows)
 
-                # Calcul des passerelles avec barres de progression
-                st.markdown("🔄 Calcul des passerelles entrantes...")
-                bar1 = st.progress(0)
-                incoming_df = calculate_transitions(
-                    non_client_jobs_df, client_jobs_df, progress_bar=bar1
-                )
-
-                st.markdown("🔄 Calcul des passerelles sortantes...")
-                bar2 = st.progress(0)
-                outgoing_df = calculate_transitions(
-                    client_jobs_df, non_client_jobs_df, progress_bar=bar2
-                )
-
-                st.success("✅ Calcul terminé ! Prêt à télécharger")
-
-                # Export Excel
-                raw_buffer = io.BytesIO()
-                with pd.ExcelWriter(raw_buffer, engine="xlsxwriter") as writer:
-                    incoming_df.to_excel(
-                        writer, index=False, sheet_name="Passerelles entrantes"
-                    )
-                    outgoing_df.to_excel(
-                        writer, index=False, sheet_name="Passerelles sortantes"
+                    # Calcul des passerelles avec barres de progression
+                    st.markdown("🔄 Calcul des passerelles entrantes...")
+                    bar1 = st.progress(0)
+                    incoming_df = calculate_transitions(
+                        non_client_jobs_df, client_jobs_df, progress_bar=bar1
                     )
 
-                raw_buffer.seek(0)
+                    st.markdown("🔄 Calcul des passerelles sortantes...")
+                    bar2 = st.progress(0)
+                    outgoing_df = calculate_transitions(
+                        client_jobs_df, non_client_jobs_df, progress_bar=bar2
+                    )
+
+                    # Export Excel
+                    raw_buffer = io.BytesIO()
+                    with pd.ExcelWriter(raw_buffer, engine="xlsxwriter") as writer:
+                        incoming_df.to_excel(
+                            writer, index=False, sheet_name="Passerelles entrantes"
+                        )
+                        outgoing_df.to_excel(
+                            writer, index=False, sheet_name="Passerelles sortantes"
+                        )
+
+                    st.session_state.raw_buffer = raw_buffer.getvalue()
+                    st.session_state.generation_complete = True
+                    st.success("✅ Calcul terminé ! Prêt à télécharger")
+
+                except Exception as e:
+                    st.error(f"Erreur lors de la génération: {str(e)}")
+                    st.session_state.generation_complete = False
+
+            # Download button - at same level as generate button
+            if st.session_state.get('generation_complete', False) and st.session_state.get('raw_buffer'):
                 st.download_button(
                     label="📥 Télécharger le fichier complet des passerelles",
-                    data=raw_buffer.getvalue(),
+                    data=st.session_state.raw_buffer,
                     file_name="passerelles_brutes.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     key="dl_raw",
-                )
-            else:
-                st.info(
-                    "Cliquez sur le bouton ci-dessus pour lancer le calcul complet."
                 )
 
     else:

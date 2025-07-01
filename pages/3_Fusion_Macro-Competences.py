@@ -23,8 +23,8 @@ fichier Excel de macro-compétences pour obtenir, en sortie, le fichier
 « Compétences » enrichi d’une colonne **Macro-compétence**.
 
 ### Étapes
-1. Charger le fichier **Compétences** (`Compétences`)
-2. Charger le fichier **Macro-compétences** (`5 - Compétence`, `4 - Macro-compétence`)
+1. Charger le fichier **Compétences** (Avec une colonne `Compétences`)
+2. Charger le fichier **Macro-compétences** (Avec un colonne `5 - Compétence` et `4 - Macro-compétence`)
 3. Cliquer sur **🚀 Lancer la fusion**
 ---
 """

@@ -18,7 +18,7 @@ st.title("📄 Extraction de fiches métiers PDF ↔ Macro-compétences")
 use_macro = st.checkbox("Avec macro compétences")
 
 uploaded_file = st.file_uploader(
-    "📄 Charger le PDF de la fiche métier",
+    "📄 Charger le PDF de la fiche métier (Avec un colonne `5 - Compétence` et `4 - Macro-compétence`)",
     type="pdf",
 )
 
@@ -44,6 +44,8 @@ if st.button("🚀 Lancer l'extraction"):
         with st.spinner("Extraction en cours…"):
             # 1) PDF ➜ DataFrame
             df_job = job_pdf_to_excel.job_pdf_to_excel(uploaded_file)
+
+            df_job = df_job[df_job["Enjeu compétences"] != "Certifications et habilitations"]
 
             # 2) Option macro ➜ même algo que l’exemple fourni
             if use_macro:

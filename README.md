@@ -1,6 +1,6 @@
 # Passerelles-Métiers 🧭
 
-Centralise et enrichit les données métiers (Compétences ↔ Macro-compétences ROME 4.0) via une application **Streamlit** prête à l’emploi.
+Centralise et enrichit les données métiers de compétence via une application **Streamlit** prête à l’emploi.
 
 ---
 
@@ -25,7 +25,7 @@ L’appel à l’API France Travail garantit des données ROME toujours à jour.
 
 ---
 
-## 3. Installation pas-à-pas
+## 3. Installation
 
 ```bash
 # 1) Cloner le dépôt
@@ -38,7 +38,7 @@ source venv/bin/activate   # Windows : venv\Scripts\activate
 
 # 3) Installer les dépendances
 make install               # équivalent : python -m pip install -r requirements.txt
-
+```
 --
 Secrets Streamlit :
 Créez un fichier .streamlit/secrets.toml ou utilisez Streamlit Cloud › Settings › Secrets :
@@ -57,12 +57,13 @@ Le module principal est Index.py. La sidebar permet d’accéder aux quatre page
 --
 
 5. Makefile
+```
 | Cible          | Action                                    |
 | -------------- | ----------------------------------------- |
 | `make run`     | `streamlit run Index.py`                  |
 | `make format`  | Formatage automatique (`black` + `isort`) |
 | `make install` | Installation des dépendances              |
-
+```
 
 --
 6. Architecture des fichiers
